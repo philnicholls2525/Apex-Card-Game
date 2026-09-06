@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="theme-color" content="#07090f" />
+  <title>APEX v0.41</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <button class="brand brand-lockup" data-route="home" aria-label="APEX home">
+        <img class="brand-header-mark" src="assets/brand/apex-mark-a-diamond.svg" alt="" aria-hidden="true" />
+        <img class="brand-header-wordmark" src="assets/brand/apex-wordmark-primary.svg" alt="APEX" />
+      </button>
+      <div class="top-actions">
+        <button class="coin-pill" id="coinPill" title="Coins"><span class="coin">◉</span><span id="coinBalance">0</span></button>
+        <button class="profile-dot" data-route="profile" aria-label="Profile">P</button>
+      </div>
+    </header>
+
+    <main id="app"></main>
+
+    <nav class="bottom-nav" aria-label="Main navigation">
+      <button data-route="home" class="nav-item active"><span>⌂</span><small>Home</small></button>
+      <button data-route="collection" class="nav-item"><span>▱</span><small>Collection</small></button>
+      <button data-route="open" class="nav-open"><img class="nav-apex-mark" src="assets/brand/apex-mark-a-diamond.svg" alt="" aria-hidden="true" /><small>Open</small></button>
+      <button data-route="objectives" class="nav-item"><span>✧</span><small>Objectives</small><b class="badge" id="objBadge">3</b></button>
+      <button data-route="store" class="nav-item"><span>◫</span><small>Store</small></button>
+    </nav>
+  </div>
+
+  <template id="homeTemplate">
+    <section class="page home-page">
+      <div class="hero-wrap">
+        <div class="hero-track" id="heroTrack">
+          <article class="hero-slide hero-packs">
+            <div class="hero-copy">
+              <p class="eyebrow">APEX UCL DEBUT EDITION 26/27</p>
+              <h1>Open packs.</h1>
+              <p><strong id="heroPackCount">0 packs</strong> and <strong id="heroBoxCount">0 boxes</strong> waiting.</p>
+              <button class="primary" data-route="open">Open now →</button>
+            </div>
+            <div class="pack-art stack-art"><div class="foil pack-1"><img src="assets/brand/apex-wordmark-primary.svg" alt="" /></div><div class="foil pack-2"><img src="assets/brand/apex-wordmark-primary.svg" alt="" /></div><div class="foil pack-3"><img src="assets/brand/apex-wordmark-primary.svg" alt="" /></div></div>
+          </article>
+          <article class="hero-slide hero-set">
+            <div class="hero-copy">
+              <p class="eyebrow">CURRENT RELEASE</p>
+              <h1>Debut Edition</h1>
+              <p>Build the first APEX UCL collection and chase the Only Ones.</p>
+              <button class="primary" data-route="collection">View collection →</button>
+            </div>
+            <img src="assets/cards/debut-edition/base/estevao.png" alt="Estêvão Willian APEX Debut Edition base card" class="hero-card-img" />
+          </article>
+          <article class="hero-slide hero-store">
+            <div class="hero-copy">
+              <p class="eyebrow">SEALED PRODUCTS</p>
+              <h1>Save for a Hobby Box.</h1>
+              <p>8 packs. 2 Green+. 1 APEX+. 1 Red+.</p>
+              <button class="primary" data-route="store">Go to store →</button>
+            </div>
+            <div class="hobby-box-art"><img src="assets/brand/apex-wordmark-primary.svg" alt="APEX" /><small>DEBUT EDITION<br/>26/27</small><em>SEALED</em></div>
+          </article>
+        </div>
+        <div class="hero-dots" id="heroDots"></div>
+      </div>
+
+      <section class="home-progress-grid">
+        <div class="road-to-debut" id="roadToDebut"></div>
+        <div class="home-focus" id="homeFocus"></div>
+      </section>
+
+      <section class="tile-grid">
+        <button class="mode-tile tile-draft" data-route="draft">
+          <div><span class="tile-kicker">PLAY</span><h2>Quick Draft</h2><p><b id="draftStars">0</b> Draft Stars</p></div>
+          <span class="tile-art cards-mini"><i></i><i></i><i></i></span>
+        </button>
+        <button class="mode-tile tile-rush" data-route="rush">
+          <div><span class="tile-kicker">10 PACKS</span><h2>Pack Rush</h2><p><b id="perfectRushes">0</b> 4★ Rushes</p></div>
+          <span class="tile-art rush-bolt">↯</span>
+        </button>
+        <button class="mode-tile wide tile-collection" data-route="collection">
+          <div><span class="tile-kicker">BINDER</span><h2>Collection</h2><p><b id="collectionOwned">0</b> owned · <b id="collectionPct">0%</b></p></div>
+          <span class="tile-art binder-art">▱ ▱ ▱</span>
+        </button>
+        <button class="mode-tile tile-sbc" data-route="sbc">
+          <div><span class="tile-kicker">BUILD</span><h2>SBCs</h2><p><b>2</b> ready to complete</p></div>
+          <span class="tile-art sbc-shield">◇</span>
+        </button>
+        <button class="mode-tile tile-store" data-route="store">
+          <div><span class="tile-kicker">SHOP</span><h2>Store</h2><p>Hobby Box · 4,500 ◉</p></div>
+          <span class="tile-art cube">◫</span>
+        </button>
+        <button class="mode-tile tile-objectives" data-route="objectives">
+          <div><span class="tile-kicker">PROGRESS</span><h2>Objectives</h2><p><b>3</b> rewards ready</p></div>
+          <span class="tile-art target">◎</span>
+        </button>
+      </section>
+    </section>
+  </template>
+
+  <template id="genericTemplate">
+    <section class="page generic-page">
+      <div class="page-title-row"><div><p class="eyebrow" id="genericEyebrow">APEX</p><h1 id="genericTitle">Screen</h1></div><button class="ghost" data-route="home">← Home</button></div>
+      <div id="genericContent"></div>
+    </section>
+  </template>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>

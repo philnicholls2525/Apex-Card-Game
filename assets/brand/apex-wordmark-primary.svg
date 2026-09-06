@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="600" viewBox="0 0 1800 600">
+  <sodipodi:namedview xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd" pagecolor="none" borderopacity="0"/>
+  <defs>
+<linearGradient id="chrome" x1="0" y1="0" x2="1" y2="1">
+  <stop offset="0" stop-color="#FFFFFF"/><stop offset="0.13" stop-color="#7F8994"/>
+  <stop offset="0.29" stop-color="#F7FAFD"/><stop offset="0.48" stop-color="#3C4651"/>
+  <stop offset="0.68" stop-color="#CAD2DA"/><stop offset="0.84" stop-color="#65707B"/>
+  <stop offset="1" stop-color="#F8FBFD"/>
+</linearGradient>
+<linearGradient id="chromeVertical" x1="0" y1="0" x2="0" y2="1">
+  <stop offset="0" stop-color="#FDFEFF"/><stop offset="0.16" stop-color="#808B96"/>
+  <stop offset="0.31" stop-color="#F3F7FA"/><stop offset="0.55" stop-color="#4A5560"/>
+  <stop offset="0.76" stop-color="#D4DBE1"/><stop offset="1" stop-color="#66717D"/>
+</linearGradient>
+<linearGradient id="steel" x1="0" y1="0" x2="1" y2="0">
+  <stop offset="0" stop-color="#4D5965"/><stop offset="0.24" stop-color="#D8E0E6"/>
+  <stop offset="0.5" stop-color="#78838E"/><stop offset="0.76" stop-color="#F5F8FA"/>
+  <stop offset="1" stop-color="#4B5661"/>
+</linearGradient>
+<linearGradient id="iceStroke" x1="0" y1="0" x2="1" y2="1">
+  <stop offset="0" stop-color="#FFFFFF"/><stop offset="0.46" stop-color="#BFD8FF"/>
+  <stop offset="0.72" stop-color="#879BAC"/><stop offset="1" stop-color="#F8FBFF"/>
+</linearGradient>
+<linearGradient id="darkMetal" x1="0" y1="0" x2="1" y2="1">
+  <stop offset="0" stop-color="#222C36"/><stop offset="0.35" stop-color="#0C131D"/>
+  <stop offset="0.68" stop-color="#33404B"/><stop offset="1" stop-color="#090D13"/>
+</linearGradient>
+<filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
+  <feGaussianBlur in="SourceAlpha" stdDeviation="8" result="blur"/>
+  <feOffset dy="6" result="offset"/>
+  <feColorMatrix in="offset" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .75 0"/>
+  <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+</filter>
+<filter id="softGlow" x="-80%" y="-80%" width="260%" height="260%">
+  <feGaussianBlur stdDeviation="12" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+</filter>
+<filter id="fineNoise" x="0" y="0" width="100%" height="100%">
+  <feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="2" seed="26" stitchTiles="stitch" result="n"/>
+  <feColorMatrix in="n" type="saturate" values="0" result="g"/>
+  <feComponentTransfer in="g"><feFuncA type="table" tableValues="0 0.055"/></feComponentTransfer>
+</filter>
+
+    <linearGradient id="logoChrome" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFFFFF"/><stop offset="0.38" stop-color="#DCE4EA"/>
+      <stop offset="0.55" stop-color="#8B97A3"/><stop offset="0.72" stop-color="#F7FAFC"/>
+      <stop offset="1" stop-color="#A7B2BC"/>
+    </linearGradient>
+    </defs>
+  <g transform="translate(180.000 150.000) scale(1.2765957)" fill="url(#logoChrome)" opacity="1.0" filter="url(#shadow)">
+<path fill-rule="evenodd" d="M0 280 L95 18 H172 L270 280 H194 L173 218 H91 L70 280 Z M110 160 H155 L132 92 Z"/>
+<path fill-rule="evenodd" d="M320 280 V18 H470 L525 72 V150 L470 202 H392 V280 Z M392 82 V139 H451 L463 127 V95 L451 82 Z"/>
+<path d="M570 18 H800 V80 H642 V116 H770 V176 H642 V218 H800 V280 H570 Z"/>
+<path d="M846 18 H930 L985 103 L1040 18 H1124 L1027 148 L1128 280 H1040 L983 192 L927 280 H840 L938 148 Z"/>
+</g><path d="M900 72 L932 104 L900 136 L868 104 Z" fill="none" stroke="url(#iceStroke)" stroke-width="10"/>
+</svg>
