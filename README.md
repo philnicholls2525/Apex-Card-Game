@@ -40,6 +40,4 @@ Deploy the function from `supabase/functions/game-api/index.ts` with JWT verific
 
 ## Current rollout boundary
 
-The account-aware responsive UI is in `src/main.js`. It provides sign-in, registration, password reset, collector onboarding, optional one-time local-save import, a cloud-backed Home, binder, store, sealed inventory and one-card-at-a-time pack reveal flow. The original localStorage `app.js` is retained as design/source reference but is not loaded by the online app.
-
-Quick Draft, Pack Rush, SBCs, objectives, friends and leaderboards remain the next server-action migrations; the buttons must not use the old local browser state.
+`src/main.js` intentionally gates the old localStorage UI after account connection. It does not launch `app.js`, because doing so would make the old browser-authoritative mutation paths available again. The old views require a full call-by-call UI migration before this becomes a playable public release.
