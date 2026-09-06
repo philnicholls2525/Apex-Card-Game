@@ -56,6 +56,7 @@ const FRAMES = {
 const SELL_VALUES = { base: 25, green: 50, blue: 90, apex: 150, red: 275, neon: 175, ice: 175, road: 250, stage: 250, elevation: 300, afterimage: 350, frameless: 450 };
 let state = null;
 let openingView = null;
+let revealPreviewQueue = null;
 let heroTimer = null;
 
 const byId = id => document.getElementById(id);
@@ -136,8 +137,9 @@ function auth(mode = 'signin', notice = '') {
   chrome(false);
   const signup = mode === 'signup';
   const reset = mode === 'reset';
-  root.innerHTML = `<section class="account-layout"><aside class="account-art"><div class="account-copy"><p class="eyebrow">APEX UCL DEBUT EDITION 26/27</p><h1>Every pull.<br><em>Your account.</em></h1><p>Your binder, coins and unopened packs are safely saved to your APEX account—on phone, tablet and desktop.</p><div class="account-cards"><i>A</i><i>APEX</i><i>26/27</i></div></div></aside><section class="account-panel"><div class="account-panel-inner"><p class="eyebrow">${reset ? 'ACCOUNT RECOVERY' : signup ? 'NEW COLLECTOR' : 'WELCOME BACK'}</p><h2>${reset ? 'Reset your password' : signup ? 'Start your APEX account' : 'Sign in to APEX'}</h2><p class="muted">${reset ? 'We’ll email a secure reset link.' : signup ? 'Your card collection follows you everywhere.' : 'Continue your Debut Edition journey.'}</p>${!reset ? `<div class="auth-tabs"><button class="${!signup ? 'active' : ''}" data-auth="signin">Sign in</button><button class="${signup ? 'active' : ''}" data-auth="signup">Create account</button></div>` : ''}<form id="authForm" class="account-form"><label>Email<input required autocomplete="email" type="email" name="email" placeholder="you@email.com"></label>${!reset ? `<label>Password<input required minlength="8" autocomplete="${signup ? 'new-password' : 'current-password'}" type="password" name="password" placeholder="At least 8 characters"></label>` : ''}<button class="primary account-submit">${reset ? 'Send reset link' : signup ? 'Create account →' : 'Sign in →'}</button></form>${!signup && !reset ? '<button class="text-button" data-auth="reset">Forgot your password?</button>' : ''}${reset ? '<button class="text-button" data-auth="signin">← Back to sign in</button>' : ''}${notice ? `<p class="form-message">${esc(notice)}</p>` : ''}<p class="account-footnote">Your email is never visible to other collectors.</p></div></section></section>`;
+  root.innerHTML = `<section class="account-layout"><aside class="account-art"><div class="account-copy"><p class="eyebrow">APEX UCL DEBUT EDITION 26/27</p><h1>Every pull.<br><em>Your account.</em></h1><p>Your binder, coins and unopened packs are safely saved to your APEX account—on phone, tablet and desktop.</p><div class="account-cards"><i>A</i><i>APEX</i><i>26/27</i></div></div></aside><section class="account-panel"><div class="account-panel-inner"><p class="eyebrow">${reset ? 'ACCOUNT RECOVERY' : signup ? 'NEW COLLECTOR' : 'WELCOME BACK'}</p><h2>${reset ? 'Reset your password' : signup ? 'Start your APEX account' : 'Sign in to APEX'}</h2><p class="muted">${reset ? 'We’ll email a secure reset link.' : signup ? 'Your card collection follows you everywhere.' : 'Continue your Debut Edition journey.'}</p>${!reset ? `<div class="auth-tabs"><button class="${!signup ? 'active' : ''}" data-auth="signin">Sign in</button><button class="${signup ? 'active' : ''}" data-auth="signup">Create account</button></div>` : ''}<form id="authForm" class="account-form"><label>Email<input required autocomplete="email" type="email" name="email" placeholder="you@email.com"></label>${!reset ? `<label>Password<input required minlength="8" autocomplete="${signup ? 'new-password' : 'current-password'}" type="password" name="password" placeholder="At least 8 characters"></label>` : ''}<button class="primary account-submit">${reset ? 'Send reset link' : signup ? 'Create account →' : 'Sign in →'}</button></form>${!signup && !reset ? '<button class="text-button" data-auth="reset">Forgot your password?</button>' : ''}${reset ? '<button class="text-button" data-auth="signin">← Back to sign in</button>' : ''}${notice ? `<p class="form-message">${esc(notice)}</p>` : ''}<div class="preview-entry"><span>Want to check the card animation first?</span><button class="ghost preview-button" id="revealPreview">Developer reveal preview</button><small>No login · fixed demo cards · no account changes</small></div><p class="account-footnote">Your email is never visible to other collectors.</p></div></section></section>`;
   root.querySelectorAll('[data-auth]').forEach(button => { button.onclick = () => auth(button.dataset.auth); });
+  byId('revealPreview').onclick = startRevealPreview;
   byId('authForm').onsubmit = async event => {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
@@ -150,6 +152,18 @@ function auth(mode = 'signin', notice = '') {
       await boot();
     } catch (error) { auth(mode, error.message); }
   };
+}
+
+function startRevealPreview() {
+  clearInterval(heroTimer);
+  chrome(false);
+  revealPreviewQueue = [
+    makeCard('base', 'estevao'),
+    makeCard('green', 'haaland'),
+    makeCard('red', 'yamal'),
+  ];
+  openingView = { id: 'local-reveal-preview', productKey: 'normal', packCount: 1, pulled: [], preview: true };
+  renderOpeningPack();
 }
 
 function onboarding(notice = '') {
@@ -284,11 +298,12 @@ function resumeOpening() {
 }
 
 function renderOpeningPack(skipPack = false) {
-  const opening = state.activeOpening;
+  const preview = Boolean(openingView?.preview);
+  const opening = preview ? { currentPack: 0 } : state?.activeOpening;
   if (!opening || !openingView) return recap();
   clearInterval(heroTimer);
   setOpeningLock(true);
-  root.innerHTML = `<section class="opening-page"><div class="opening-top"><div class="opening-lock-status">🔒 Opening locked</div><div><p class="eyebrow">${esc(PRODUCTS[openingView.productKey]?.[0] || 'APEX Opening')}</p><h2>Pack ${Number(opening.currentPack) + 1} of ${openingView.packCount}</h2></div><div class="opening-progress">${openingView.pulled.length} cards pulled</div></div><div class="pack-stage"><div class="foil interactive-pack" id="ripPack"><img class="pack-wordmark" src="assets/brand/apex-wordmark-primary.svg" alt="APEX"><small>DEBUT EDITION 26/27</small><em>TAP TO RIP</em></div><div class="reveal-area" id="revealArea"></div></div></section>`;
+  root.innerHTML = `<section class="opening-page"><div class="opening-top"><div class="opening-lock-status">${preview ? '◉ Demo preview · no save' : '🔒 Opening locked'}</div><div><p class="eyebrow">${esc(PRODUCTS[openingView.productKey]?.[0] || 'APEX Opening')}</p><h2>${preview ? 'Reveal preview' : `Pack ${Number(opening.currentPack) + 1} of ${openingView.packCount}`}</h2></div><div class="opening-progress">${openingView.pulled.length} cards pulled</div></div><div class="pack-stage"><div class="foil interactive-pack" id="ripPack"><img class="pack-wordmark" src="assets/brand/apex-wordmark-primary.svg" alt="APEX"><small>DEBUT EDITION 26/27</small><em>TAP TO RIP</em></div><div class="reveal-area" id="revealArea"></div></div></section>`;
   byId('ripPack').onclick = () => { byId('ripPack').classList.add('ripped'); setTimeout(showCardBack, 250); };
   if (skipPack) { byId('ripPack').remove(); showCardBack(); }
 }
@@ -301,7 +316,22 @@ function showCardBack() {
   const area = byId('revealArea');
   if (!area) return;
   area.innerHTML = cardBackHTML();
-  byId('cardBack').onclick = revealNext;
+  byId('cardBack').onclick = openingView?.preview ? revealPreviewNext : revealNext;
+}
+
+async function revealPreviewNext() {
+  const back = byId('cardBack');
+  if (!back || back.disabled || !openingView?.preview) return;
+  const revealIndex = openingView.pulled.length;
+  const card = revealPreviewQueue?.[revealIndex];
+  if (!card) return previewRecap();
+  back.disabled = true;
+  back.classList.add('is-revealing');
+  const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  await new Promise(resolve => setTimeout(resolve, reduced ? 200 : 740));
+  const pulled = { card, cardCode: card.id, packIndex: 0, revealIndex, completed: revealIndex === revealPreviewQueue.length - 1 };
+  openingView.pulled.push(pulled);
+  showRevealed(pulled);
 }
 
 async function revealNext() {
@@ -334,7 +364,22 @@ function showRevealed(pulled) {
   const finalPack = Boolean(pulled.completed);
   byId('revealArea').innerHTML = `<button class="revealed-card-click" id="cardAdvance">${cardHTML(card, true)}</button><div class="reveal-caption"><span class="reveal-count">${Number(pulled.revealIndex) + 1}/3</span><strong>${esc((TYPES[card.type]?.[0] || 'APEX').toUpperCase())} · ${tierLabel(card.tier)}</strong><em>Tap card to ${last ? (finalPack ? 'finish' : 'open next pack') : 'reveal next'}</em></div>`;
   root.querySelector('.opening-progress').textContent = `${openingView.pulled.length} cards pulled`;
-  byId('cardAdvance').onclick = () => finalPack ? recap() : last ? renderOpeningPack() : showCardBack();
+  byId('cardAdvance').onclick = () => {
+    if (openingView?.preview) return last ? previewRecap() : showCardBack();
+    return finalPack ? recap() : last ? renderOpeningPack() : showCardBack();
+  };
+}
+
+function previewRecap() {
+  const pulled = openingView?.pulled || [];
+  setOpeningLock(false);
+  root.innerHTML = `<section class="preview-recap page"><div class="recap-hero"><div><p class="eyebrow">DEVELOPER REVEAL PREVIEW</p><h2>Reveal complete</h2><p class="muted">All three live card faces rendered successfully. This demo did not sign in, spend a pack or change a collection.</p></div><div class="button-row"><button class="primary" id="replayPreview">Replay preview</button><button class="ghost" id="exitPreview">Back to sign in</button></div></div><div class="preview-card-grid">${pulled.map(item => `<article>${cardHTML(item.card)}<strong>${esc(item.card.name)}</strong><small>${esc(TYPES[item.card.type]?.[0] || 'APEX')}</small></article>`).join('')}</div></section>`;
+  byId('replayPreview').onclick = startRevealPreview;
+  byId('exitPreview').onclick = () => {
+    revealPreviewQueue = null;
+    openingView = null;
+    auth();
+  };
 }
 
 function recap() {
