@@ -33,3 +33,15 @@ test('online UI uses the packaged layered card and reveal pipeline', async () =>
   assert.match(source, /is-revealing/);
   assert.match(source, /open\.reveal/);
 });
+
+test('developer reveal preview is isolated from auth and game mutations', async () => {
+  const source = await readFile('src/main.js', 'utf8');
+  assert.match(source, /id="revealPreview"/);
+  assert.match(source, /preview: true/);
+
+  const start = source.match(/function startRevealPreview\(\) \{([\s\S]*?)\n\}/)?.[1] || '';
+  const reveal = source.match(/async function revealPreviewNext\(\) \{([\s\S]*?)\n\}/)?.[1] || '';
+  assert.doesNotMatch(start, /supabase|gameApi|signIn|signUp/);
+  assert.doesNotMatch(reveal, /supabase|gameApi|refresh|signIn|signUp/);
+  assert.match(source, /did not sign in, spend a pack or change a collection/);
+});
