@@ -6,9 +6,7 @@ export async function signUp(email, password) {
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
-    options: {
-      emailRedirectTo: APEX_SITE_URL
-    }
+    options: { emailRedirectTo: APEX_SITE_URL },
   });
   if (error) throw error;
   return data;
@@ -25,8 +23,6 @@ export async function signOut() {
 }
 
 export async function resetPassword(email) {
-  const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: APEX_SITE_URL
-  });
+  const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: APEX_SITE_URL });
   if (error) throw error;
 }

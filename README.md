@@ -40,6 +40,8 @@ Deploy the function from `supabase/functions/game-api/index.ts` with JWT verific
 
 ## Current rollout boundary
 
-The account-aware responsive UI is in `src/main.js`. It provides sign-in, registration, password reset, collector onboarding, optional one-time local-save import, a cloud-backed Home, binder, store, sealed inventory and one-card-at-a-time pack reveal flow. The original localStorage `app.js` is retained as design/source reference but is not loaded by the online app.
+The account-aware responsive UI is in `src/main.js`. It provides sign-in, registration, password reset, collector onboarding, optional one-time local-save import, and cloud-backed versions of the original v0.41 Home, binder, store, sealed inventory and animated one-card-at-a-time reveal flow. The original localStorage `app.js` is retained as design/source reference but is not loaded by the online app.
+
+The finished card artwork and layered reveal assets in `assets/` are the original full files from the approved v0.41 package. `npm test` includes a truncation check so incomplete PNG uploads cannot silently ship again.
 
 Quick Draft, Pack Rush, SBCs, objectives, friends and leaderboards remain the next server-action migrations; the buttons must not use the old local browser state.
