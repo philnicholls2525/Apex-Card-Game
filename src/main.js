@@ -217,7 +217,7 @@ function home() {
   const road = roadState();
   const chapter = road.active;
   byId('roadToDebut').innerHTML = `<div class="road-top"><div><p class="eyebrow">ROAD TO DEBUT · ${road.complete}/5</p><h2>${chapter.number} · ${chapter.name}</h2><p>${chapter.desc}</p></div><button class="tiny-btn" id="roadDetails">Full path</button></div><div class="progress road-progress"><i style="width:${road.complete * 20}%"></i></div><div class="road-bottom"><span>${chapter.progress}/${chapter.target} · Online progression</span><button class="primary road-action" id="roadAction">${chapter.action} →</button></div>`;
-  byId('homeFocus').innerHTML = `<p class="eyebrow">TODAY IN APEX</p><h3>${packCount ? 'Your next pull is waiting' : 'Build your sealed inventory'}</h3><p>${packCount ? `You have ${packCount} sealed pack${packCount === 1 ? '' : 's'} ready to reveal.` : 'Visit the Store to pick up a Normal Pack.'}</p><div class="progress"><i style="width:${packCount ? 100 : 0}%"></i></div><p class="muted focus-meta">${packCount ? 'Ready' : '0/1'} · Secure online opening</p><div class="button-row"><button class="tiny-btn primary-mini" id="homeObjectives">${packCount ? 'Open packs' : 'Visit store'}</button></div>`;
+  byId('homeFocus').innerHTML = `<p class="eyebrow">TODAY IN APEX</p><h3>${packCount ? 'Your next pull is waiting' : 'Build your sealed inventory'}</h3><p>${packCount ? `You have ${packCount} sealed pack${packCount === 1 ? '' : 's'} ready to reveal.` : 'Visit the Store to pick up a Normal Pack.'}</p><div class="progress"><i style="width:${packCount ? 100 : 0}%"></i></div><p class="muted focus-meta">${packCount ? 'Ready' : '0/1'} · Secure online opening</p><div class="button-row"><button class="tiny-btn primary-mini" id="homeObjectives">${packCount ? 'Open packs' : 'Visit store'}</button><button class="tiny-btn" data-route="rewards">Daily reward</button></div>`;
   byId('roadAction').onclick = () => route(chapter.route);
   byId('roadDetails').onclick = showRoad;
   byId('homeObjectives').onclick = () => route(packCount ? 'open' : 'store');
@@ -455,6 +455,42 @@ function confirmPurchase(key) {
   byId('confirmBuy').onclick = async event => { event.currentTarget.disabled = true; event.currentTarget.textContent = 'Purchasing…'; try { await gameApi('purchase', { productKey: key }); await refresh(); shell.remove(); store(); setChrome(); } catch (error) { event.currentTarget.disabled = false; event.currentTarget.textContent = error.message; } };
 }
 
+function rewardText(payload = {}) {
+  const parts = [];
+  if (Number(payload.coins || 0)) parts.push(`${Number(payload.coins).toLocaleString()} coins`);
+  if (Number(payload.xp || 0)) parts.push(`${Number(payload.xp).toLocaleString()} XP`);
+  Object.entries(payload.packs || {}).forEach(([key, quantity]) => parts.push(`${quantity} × ${PRODUCTS[key]?.[0] || key}`));
+  return parts.join(' · ') || 'APEX reward';
+}
+
+async function rewards() {
+  const content = page('Daily Rewards', '7 DAY LOGIN TRACK');
+  content.innerHTML = '<div class="notice">Loading your server-verified daily reward…</div>';
+  try {
+    const daily = await gameApi('daily.status');
+    const track = daily.track || [];
+    const currentDay = Number(daily.currentDay || 1);
+    const claimed = Boolean(daily.alreadyClaimed);
+    content.innerHTML = `<section class="daily-reward-hero"><div><p class="eyebrow">APEX DAILY LOGIN</p><h2>${claimed ? 'Reward claimed for today' : `Day ${currentDay} is ready`}</h2><p>${claimed ? 'Come back after the next APEX server day for your next reward.' : 'Your entitlement is awarded by the APEX server, then any pack goes straight into your normal unopened-pack inventory.'}</p><div class="button-row">${claimed ? '<button class="ghost" data-route="home">Back home</button>' : '<button class="primary" id="claimDaily">Claim reward</button>'}</div></div><div class="daily-current"><span>DAY ${currentDay}</span><b>${esc(daily.reward?.name || 'Daily reward')}</b><small>${esc(rewardText(daily.reward?.payload))}</small></div></section><div class="daily-track">${track.map(item => `<article class="${Number(item.day) === currentDay ? 'current' : ''} ${Number(item.day) < currentDay || (claimed && Number(item.day) === currentDay) ? 'claimed' : ''}"><span>DAY ${item.day}</span><strong>${esc(item.name)}</strong><small>${esc(rewardText(item.payload))}</small></article>`).join('')}</div>`;
+    const claim = byId('claimDaily');
+    if (claim) claim.onclick = async () => {
+      claim.disabled = true;
+      claim.textContent = 'Claiming…';
+      try {
+        await gameApi('daily.claim');
+        await refresh();
+        await rewards();
+      } catch (error) {
+        claim.disabled = false;
+        claim.textContent = error.message || 'Try again';
+      }
+    };
+    bindRoutes(content);
+  } catch (error) {
+    content.innerHTML = `<div class="notice">Daily rewards are temporarily unavailable. ${esc(error.message || 'Please try again.')}</div>`;
+  }
+}
+
 function profile() {
   const career = state.career || {};
   const content = page('Profile & Stats', 'YOUR APEX CAREER');
@@ -479,6 +515,7 @@ function route(name = 'home') {
   else if (name === 'collection') collection();
   else if (name === 'store') store();
   else if (name === 'profile') profile();
+  else if (name === 'rewards') rewards();
   else soon(name === 'objectives' ? 'Objectives' : name === 'draft' ? 'Quick Draft' : name === 'sbc' ? 'SBCs' : 'Pack Rush');
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }

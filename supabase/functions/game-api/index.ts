@@ -16,8 +16,9 @@ Deno.serve(async (req) => {
   if (req.method !== "POST") return fail(405, "method_not_allowed", "Use POST.");
   const authorization = req.headers.get("Authorization");
   if (!authorization) return fail(401, "missing_auth", "Sign in to play.");
-  const url = Deno.env.get("SUPABASE_URL")!;
-  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const url = Deno.env.get("SUPABASE_URL");
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (!url || !serviceKey) return fail(500, "server_configuration", "The APEX service is not configured.");
   const admin = createClient(url, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } });
   const token = authorization.replace(/^Bearer\s+/i, "");
   const { data: userData, error: userError } = await admin.auth.getUser(token);
@@ -43,6 +44,8 @@ Deno.serve(async (req) => {
       case "open.reveal": data = await rpc("api_open_reveal", { p_user: userId, p_opening: String(body.openingId), p_key: idempotencyKey }); break;
       case "gallery": data = await rpc("api_toggle_gallery", { p_user: userId, p_card_code: String(body.cardCode), p_enabled: Boolean(body.enabled), p_key: idempotencyKey }); break;
       case "quickSell": data = await rpc("api_quick_sell", { p_user: userId, p_cards: body.cards || {}, p_key: idempotencyKey }); break;
+      case "daily.status": data = await rpc("api_daily_reward_status", { p_user: userId }); break;
+      case "daily.claim": data = await rpc("api_claim_daily_reward", { p_user: userId, p_key: idempotencyKey }); break;
       case "draft.start": case "draft.action": case "rush.start": case "rush.action": case "sbc.submit": case "objective.claim":
         return fail(501, "mode_pending", "This server action is reserved but is not enabled in this checkpoint.");
       default: return fail(400, "unknown_action", "Unknown game action.");
@@ -51,6 +54,6 @@ Deno.serve(async (req) => {
   } catch (error) {
     const message = error instanceof Error ? error.message : "Game action failed.";
     console.error(action, message);
-    return fail(message.includes("Insufficient") ? 409 : 400, "game_action_failed", message);
+    return fail(message.includes("Insufficient") ? 409 : message.includes("already claimed") ? 409 : 400, "game_action_failed", message);
   }
 });
