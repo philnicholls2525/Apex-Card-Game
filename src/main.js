@@ -2,6 +2,7 @@ import { supabase } from './supabase-client.js';
 import { signIn, signOut, signUp, resetPassword } from './auth.js';
 import { gameApi } from './game-api.js';
 import { readLegacySave } from './import-validator.js';
+import { renderFriends } from './social-ui.js';
 
 const root = document.querySelector('#app');
 const PLAYERS = [
@@ -491,10 +492,15 @@ async function rewards() {
   }
 }
 
+function friends() {
+  renderFriends({ page, gameApi, esc, byId });
+}
+
 function profile() {
   const career = state.career || {};
   const content = page('Profile & Stats', 'YOUR APEX CAREER');
-  content.innerHTML = `<div class="stat-grid"><div class="stat-item"><span class="qty">${Number(career.packs_opened || 0)}</span><p>Real packs opened</p></div><div class="stat-item"><span class="qty">${Number(career.boxes_opened || 0)}</span><p>Boxes opened</p></div><div class="stat-item"><span class="qty">${Number(career.cards_pulled || 0)}</span><p>Cards pulled</p></div><div class="stat-item"><span class="qty">${state.cards?.length || 0}</span><p>Unique cards owned</p></div><div class="stat-item"><span class="qty">${Number(career.draft_stars || 0)}</span><p>Draft Stars</p></div><div class="stat-item"><span class="qty">${Number(career.xp || 0)}</span><p>APEX XP</p></div><div class="stat-item"><span class="qty">${Number(career.quick_sell_coins || 0).toLocaleString()}</span><p>Coins from spares</p></div></div><div class="generic-card" style="margin-top:14px"><p class="eyebrow">APEX ACCOUNT</p><h3>${esc(state.profile?.display_name || 'Collector')}</h3><p class="muted">@${esc(state.profile?.username || 'apex-collector')} · secure cloud save</p><button class="tiny-btn" id="logout">Sign out</button></div>`;
+  content.innerHTML = `<div class="stat-grid"><div class="stat-item"><span class="qty">${Number(career.packs_opened || 0)}</span><p>Real packs opened</p></div><div class="stat-item"><span class="qty">${Number(career.boxes_opened || 0)}</span><p>Boxes opened</p></div><div class="stat-item"><span class="qty">${Number(career.cards_pulled || 0)}</span><p>Cards pulled</p></div><div class="stat-item"><span class="qty">${state.cards?.length || 0}</span><p>Unique cards owned</p></div><div class="stat-item"><span class="qty">${Number(career.draft_stars || 0)}</span><p>Draft Stars</p></div><div class="stat-item"><span class="qty">${Number(career.xp || 0)}</span><p>APEX XP</p></div><div class="stat-item"><span class="qty">${Number(career.quick_sell_coins || 0).toLocaleString()}</span><p>Coins from spares</p></div></div><div class="generic-card" style="margin-top:14px"><p class="eyebrow">APEX ACCOUNT</p><h3>${esc(state.profile?.display_name || 'Collector')}</h3><p class="muted">@${esc(state.profile?.username || 'apex-collector')} · secure cloud save</p><div class="profile-actions"><button class="tiny-btn" id="friends">Friends</button><button class="tiny-btn" id="logout">Sign out</button></div></div>`;
+  byId('friends').onclick = () => route('friends');
   byId('logout').onclick = async () => { await signOut(); state = null; auth(); };
 }
 
@@ -515,6 +521,7 @@ function route(name = 'home') {
   else if (name === 'collection') collection();
   else if (name === 'store') store();
   else if (name === 'profile') profile();
+  else if (name === 'friends') friends();
   else if (name === 'rewards') rewards();
   else soon(name === 'objectives' ? 'Objectives' : name === 'draft' ? 'Quick Draft' : name === 'sbc' ? 'SBCs' : 'Pack Rush');
   window.scrollTo({ top: 0, behavior: 'smooth' });

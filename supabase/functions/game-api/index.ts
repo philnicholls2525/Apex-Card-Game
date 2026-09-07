@@ -46,6 +46,13 @@ Deno.serve(async (req) => {
       case "quickSell": data = await rpc("api_quick_sell", { p_user: userId, p_cards: body.cards || {}, p_key: idempotencyKey }); break;
       case "daily.status": data = await rpc("api_daily_reward_status", { p_user: userId }); break;
       case "daily.claim": data = await rpc("api_claim_daily_reward", { p_user: userId, p_key: idempotencyKey }); break;
+      case "social.search": data = await rpc("api_social_search", { p_user: userId, p_query: String(body.query || "") }); break;
+      case "social.list": data = await rpc("api_social_list", { p_user: userId }); break;
+      case "friend.request": data = await rpc("api_friend_request", { p_user: userId, p_target: String(body.targetUserId || ""), p_key: idempotencyKey }); break;
+      case "friend.respond": data = await rpc("api_friend_respond", { p_user: userId, p_friendship: String(body.friendshipId || ""), p_accept: Boolean(body.accept) }); break;
+      case "friend.remove": data = await rpc("api_friend_remove", { p_user: userId, p_target: String(body.targetUserId || "") }); break;
+      case "friend.block": data = await rpc("api_user_block", { p_user: userId, p_target: String(body.targetUserId || ""), p_block: Boolean(body.block) }); break;
+      case "profile.update": data = await rpc("api_profile_update", { p_user: userId, p_display: String(body.displayName || ""), p_favourite_club: String(body.favouriteClub || ""), p_privacy: body.privacy || null }); break;
       case "draft.start": case "draft.action": case "rush.start": case "rush.action": case "sbc.submit": case "objective.claim":
         return fail(501, "mode_pending", "This server action is reserved but is not enabled in this checkpoint.");
       default: return fail(400, "unknown_action", "Unknown game action.");
