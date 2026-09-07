@@ -33,11 +33,6 @@ Deno.serve(async (req) => {
     if (error) throw error;
     return data;
   };
-  const privateRpc = async (name: string, args: Record<string, unknown>) => {
-    const { data, error } = await admin.schema("private").rpc(name, args);
-    if (error) throw error;
-    return data;
-  };
   try {
     let data: unknown;
     switch (action) {
@@ -49,8 +44,8 @@ Deno.serve(async (req) => {
       case "open.reveal": data = await rpc("api_open_reveal", { p_user: userId, p_opening: String(body.openingId), p_key: idempotencyKey }); break;
       case "gallery": data = await rpc("api_toggle_gallery", { p_user: userId, p_card_code: String(body.cardCode), p_enabled: Boolean(body.enabled), p_key: idempotencyKey }); break;
       case "quickSell": data = await rpc("api_quick_sell", { p_user: userId, p_cards: body.cards || {}, p_key: idempotencyKey }); break;
-      case "daily.status": data = await privateRpc("api_daily_reward_status", { p_user: userId }); break;
-      case "daily.claim": data = await privateRpc("api_claim_daily_reward", { p_user: userId, p_key: idempotencyKey }); break;
+      case "daily.status": data = await rpc("api_daily_reward_status", { p_user: userId }); break;
+      case "daily.claim": data = await rpc("api_claim_daily_reward", { p_user: userId, p_key: idempotencyKey }); break;
       case "draft.start": case "draft.action": case "rush.start": case "rush.action": case "sbc.submit": case "objective.claim":
         return fail(501, "mode_pending", "This server action is reserved but is not enabled in this checkpoint.");
       default: return fail(400, "unknown_action", "Unknown game action.");
