@@ -3,6 +3,7 @@ import { signIn, signOut, signUp, resetPassword } from './auth.js';
 import { gameApi } from './game-api.js';
 import { readLegacySave } from './import-validator.js';
 import { renderFriends } from './social-ui.js';
+import { renderFriendTeams, renderCompetitions } from './teams-ui.js';
 
 const root = document.querySelector('#app');
 const PLAYERS = [
@@ -472,7 +473,7 @@ async function rewards() {
     const track = daily.track || [];
     const currentDay = Number(daily.currentDay || 1);
     const claimed = Boolean(daily.alreadyClaimed);
-    content.innerHTML = `<section class="daily-reward-hero"><div><p class="eyebrow">APEX DAILY LOGIN</p><h2>${claimed ? 'Reward claimed for today' : `Day ${currentDay} is ready`}</h2><p>${claimed ? 'Come back after the next APEX server day for your next reward.' : 'Your entitlement is awarded by the APEX server, then any pack goes straight into your normal unopened-pack inventory.'}</p><div class="button-row">${claimed ? '<button class="ghost" data-route="home">Back home</button>' : '<button class="primary" id="claimDaily">Claim reward</button>'}</div></div><div class="daily-current"><span>DAY ${currentDay}</span><b>${esc(daily.reward?.name || 'Daily reward')}</b><small>${esc(rewardText(daily.reward?.payload))}</small></div></section><div class="daily-track">${track.map(item => `<article class="${Number(item.day) === currentDay ? 'current' : ''} ${Number(item.day) < currentDay || (claimed && Number(item.day) === currentDay) ? 'claimed' : ''}"><span>DAY ${item.day}</span><strong>${esc(item.name)}</strong><small>${esc(rewardText(item.payload))}</small></article>`).join('')}</div>`;
+    content.innerHTML = `<section class="daily-reward-hero"><div><p class="eyebrow">APEX DAILY LOGIN</p><h2>${claimed ? 'Reward claimed for today' : `Day ${currentDay} is ready`}</h2><p>${claimed ? `Come back after ${daily.nextEligibleAt ? esc(new Date(daily.nextEligibleAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })) : 'the next APEX server day'} for your next reward.` : 'Your entitlement is awarded by the APEX server, then any pack goes straight into your normal unopened-pack inventory.'}</p><div class="daily-streak"><span><b>${Number(daily.streak || 0)}</b> day streak</span><span><b>${Number(daily.cyclesCompleted || 0)}</b> completed tracks</span></div><div class="button-row">${claimed ? '<button class="ghost" data-route="home">Back home</button>' : '<button class="primary" id="claimDaily">Claim reward</button>'}</div></div><div class="daily-current"><span>DAY ${currentDay}</span><b>${esc(daily.reward?.name || 'Daily reward')}</b><small>${esc(rewardText(daily.reward?.payload))}</small></div></section><div class="daily-track">${track.map(item => `<article class="${Number(item.day) === currentDay ? 'current' : ''} ${Number(item.day) < currentDay || (claimed && Number(item.day) === currentDay) ? 'claimed' : ''}"><span>DAY ${item.day}</span><strong>${esc(item.name)}</strong><small>${esc(rewardText(item.payload))}</small></article>`).join('')}</div>`;
     const claim = byId('claimDaily');
     if (claim) claim.onclick = async () => {
       claim.disabled = true;
@@ -493,14 +494,24 @@ async function rewards() {
 }
 
 function friends() {
-  renderFriends({ page, gameApi, esc, byId });
+  renderFriends({ page, gameApi, esc, byId, navigate: route });
+}
+
+function friendTeams() {
+  renderFriendTeams({ page, gameApi, esc, byId, navigate: route });
+}
+
+function competitions() {
+  renderCompetitions({ page, gameApi, esc, byId, navigate: route });
 }
 
 function profile() {
   const career = state.career || {};
   const content = page('Profile & Stats', 'YOUR APEX CAREER');
-  content.innerHTML = `<div class="stat-grid"><div class="stat-item"><span class="qty">${Number(career.packs_opened || 0)}</span><p>Real packs opened</p></div><div class="stat-item"><span class="qty">${Number(career.boxes_opened || 0)}</span><p>Boxes opened</p></div><div class="stat-item"><span class="qty">${Number(career.cards_pulled || 0)}</span><p>Cards pulled</p></div><div class="stat-item"><span class="qty">${state.cards?.length || 0}</span><p>Unique cards owned</p></div><div class="stat-item"><span class="qty">${Number(career.draft_stars || 0)}</span><p>Draft Stars</p></div><div class="stat-item"><span class="qty">${Number(career.xp || 0)}</span><p>APEX XP</p></div><div class="stat-item"><span class="qty">${Number(career.quick_sell_coins || 0).toLocaleString()}</span><p>Coins from spares</p></div></div><div class="generic-card" style="margin-top:14px"><p class="eyebrow">APEX ACCOUNT</p><h3>${esc(state.profile?.display_name || 'Collector')}</h3><p class="muted">@${esc(state.profile?.username || 'apex-collector')} · secure cloud save</p><div class="profile-actions"><button class="tiny-btn" id="friends">Friends</button><button class="tiny-btn" id="logout">Sign out</button></div></div>`;
+  content.innerHTML = `<div class="stat-grid"><div class="stat-item"><span class="qty">${Number(career.packs_opened || 0)}</span><p>Real packs opened</p></div><div class="stat-item"><span class="qty">${Number(career.boxes_opened || 0)}</span><p>Boxes opened</p></div><div class="stat-item"><span class="qty">${Number(career.cards_pulled || 0)}</span><p>Cards pulled</p></div><div class="stat-item"><span class="qty">${state.cards?.length || 0}</span><p>Unique cards owned</p></div><div class="stat-item"><span class="qty">${Number(career.draft_stars || 0)}</span><p>Draft Stars</p></div><div class="stat-item"><span class="qty">${Number(career.xp || 0)}</span><p>APEX XP</p></div><div class="stat-item"><span class="qty">${Number(career.quick_sell_coins || 0).toLocaleString()}</span><p>Coins from spares</p></div></div><div class="generic-card" style="margin-top:14px"><p class="eyebrow">APEX ACCOUNT</p><h3>${esc(state.profile?.display_name || 'Collector')}</h3><p class="muted">@${esc(state.profile?.username || 'apex-collector')} · secure cloud save</p><div class="profile-actions"><button class="tiny-btn" id="friends">Friends</button><button class="tiny-btn" id="friendTeams">Friend Teams</button><button class="tiny-btn" id="competitions">Competitions</button><button class="tiny-btn" id="logout">Sign out</button></div></div>`;
   byId('friends').onclick = () => route('friends');
+  byId('friendTeams').onclick = () => route('friend-team');
+  byId('competitions').onclick = () => route('competitions');
   byId('logout').onclick = async () => { await signOut(); state = null; auth(); };
 }
 
@@ -522,6 +533,8 @@ function route(name = 'home') {
   else if (name === 'store') store();
   else if (name === 'profile') profile();
   else if (name === 'friends') friends();
+  else if (name === 'friend-team') friendTeams();
+  else if (name === 'competitions') competitions();
   else if (name === 'rewards') rewards();
   else soon(name === 'objectives' ? 'Objectives' : name === 'draft' ? 'Quick Draft' : name === 'sbc' ? 'SBCs' : 'Pack Rush');
   window.scrollTo({ top: 0, behavior: 'smooth' });
