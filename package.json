@@ -6,7 +6,7 @@
   "description": "APEX vanilla browser game with a Supabase-authoritative beta backend",
   "scripts": {
     "test": "node --test tests/*.test.mjs",
-    "check": "node --check app.js && node --check src/main.js && node --check src/auth.js && node --check src/game-api.js && node --check src/social-ui.js && node --check src/teams-ui.js && node --check src/state-sync.js",
+    "check": "node --check app.js && node --check src/main.js && node --check src/auth.js && node --check src/game-api.js && node --check src/social-ui.js && node --check src/clubs-ui.js && node --check src/teams-ui.js && node --check src/state-sync.js",
     "serve": "npx serve .",
     "supabase:start": "supabase start",
     "supabase:reset": "supabase db reset",

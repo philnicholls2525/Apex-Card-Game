@@ -67,3 +67,34 @@ test('daily rewards expose configurable continuity and explicit streak state', a
   assert.match(sql, /'nextEligibleAt',v_progress\.next_eligible_at/);
   assert.match(main, /completed tracks/);
 });
+
+test('merged Clubs and Daily Rewards functionality remains connected', async () => {
+  const [main, clubs, edge, clubSql, styles] = await Promise.all([
+    readFile('src/main.js', 'utf8'),
+    readFile('src/clubs-ui.js', 'utf8'),
+    readFile('supabase/functions/game-api/index.ts', 'utf8'),
+    readFile('supabase/migrations/20260907020000_clubs_v1_service_gateway.sql', 'utf8'),
+    readFile('styles.css', 'utf8'),
+  ]);
+
+  assert.match(main, /renderClubs/);
+  assert.match(main, /renderFriendTeams/);
+  assert.match(main, /openDailyRewardOnArrival/);
+  assert.match(main, /rewards\(options\.daily\)/);
+  assert.match(main, /daily-claim/);
+  assert.match(main, />Not now</);
+  assert.match(clubs, /club\.status/);
+  assert.match(clubs, /club\.role\.update/);
+
+  const clubActions = [
+    'club.status', 'club.search', 'club.create', 'club.join',
+    'club.request.respond', 'club.invite', 'club.invite.respond',
+    'club.role.update', 'club.leave',
+  ];
+  for (const action of clubActions) assert.match(edge, new RegExp(`case "${action.replaceAll('.', '\\.')}`));
+  assert.match(clubSql, /grant execute on function[\s\S]*public\.api_club_create[\s\S]*to service_role/);
+  assert.match(styles, /\.clubs-hero/);
+  assert.match(styles, /\.friend-team-identity/);
+  assert.match(styles, /\.daily-reward-card/);
+  assert.doesNotMatch(styles, /\\n\\n\/\* Clubs v1/);
+});

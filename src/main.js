@@ -4,6 +4,7 @@ import { gameApi } from './game-api.js';
 import { readLegacySave } from './import-validator.js';
 import { renderFriends } from './social-ui.js';
 import { renderFriendTeams, renderCompetitions } from './teams-ui.js';
+import { renderClubs } from './clubs-ui.js';
 
 const root = document.querySelector('#app');
 const PLAYERS = [
@@ -176,12 +177,12 @@ function onboarding(notice = '') {
   byId('onboard').onsubmit = async event => {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
-    try { state = await gameApi('onboard', { displayName: form.get('name'), username: form.get('username') }); route('home'); }
+    try { state = await gameApi('onboard', { displayName: form.get('name'), username: form.get('username') }); if (!(await openDailyRewardOnArrival())) route('home'); }
     catch (error) { onboarding(error.message); }
   };
   byId('import')?.addEventListener('click', async () => {
     if (!confirm('Import this local APEX save once? This cannot be undone.')) return;
-    try { state = await gameApi('import.localSave', { save: legacy }); route('home'); }
+    try { state = await gameApi('import.localSave', { save: legacy }); if (!(await openDailyRewardOnArrival())) route('home'); }
     catch (error) { onboarding(error.message); }
   });
 }
@@ -465,24 +466,95 @@ function rewardText(payload = {}) {
   return parts.join(' · ') || 'APEX reward';
 }
 
-async function rewards() {
+function rewardArt(payload = {}, size = 'card') {
+  const packs = payload?.packs || {};
+  const packKey = Object.keys(packs).find(key => Number(packs[key]) > 0) || '';
+  const artPack = ['normal', 'plus', 'premium', 'elite'].includes(packKey) ? packKey : 'normal';
+  const packLabel = (PRODUCTS[packKey]?.[0] || packKey || 'Pack').replace(/\s+Pack$/i, '');
+  const coins = Number(payload?.coins || 0);
+  const xp = Number(payload?.xp || 0);
+  const parts = [];
+
+  if (packKey) parts.push(`<span class="daily-pack daily-pack-${artPack}"><i></i><b>◇</b><small>${esc(packLabel)}</small></span>`);
+  if (coins) parts.push(`<span class="daily-coins"><i></i><i></i><i></i><b>◇</b></span>`);
+  if (xp) parts.push(`<span class="daily-xp"><b>XP</b><small>${xp.toLocaleString()}</small></span>`);
+  if (!parts.length) parts.push(`<span class="daily-glyph">◇</span>`);
+
+  return `<div class="daily-art daily-art-${size} ${packKey === 'elite' ? 'is-elite' : ''}" aria-hidden="true">${parts.join('')}</div>`;
+}
+
+function dailyRewardCard(item, currentDay, claimed) {
+  const day = Number(item?.day || 0);
+  const isCurrent = day === currentDay;
+  const isClaimed = day < currentDay || (isCurrent && claimed);
+  const status = isClaimed ? 'claimed' : isCurrent ? 'current' : 'locked';
+  const elite = Number(item?.payload?.packs?.elite || 0) > 0;
+  const marker = isClaimed ? '✓' : isCurrent ? 'NOW' : '⌁';
+
+  return `<article class="daily-reward-card ${status} ${elite ? 'elite' : ''}">
+    <div class="daily-card-top"><span>DAY ${day}</span><b aria-label="${isClaimed ? 'Claimed' : isCurrent ? 'Available now' : 'Locked'}">${marker}</b></div>
+    ${rewardArt(item?.payload || {}, 'card')}
+    <strong>${esc(item?.name || 'APEX reward')}</strong>
+    <small>${esc(rewardText(item?.payload || {}))}</small>
+  </article>`;
+}
+
+async function rewards(initialDaily = null) {
   const content = page('Daily Rewards', '7 DAY LOGIN TRACK');
   content.innerHTML = '<div class="notice">Loading your server-verified daily reward…</div>';
+
   try {
-    const daily = await gameApi('daily.status');
+    const daily = initialDaily || await gameApi('daily.status');
     const track = daily.track || [];
     const currentDay = Number(daily.currentDay || 1);
     const claimed = Boolean(daily.alreadyClaimed);
-    content.innerHTML = `<section class="daily-reward-hero"><div><p class="eyebrow">APEX DAILY LOGIN</p><h2>${claimed ? 'Reward claimed for today' : `Day ${currentDay} is ready`}</h2><p>${claimed ? `Come back after ${daily.nextEligibleAt ? esc(new Date(daily.nextEligibleAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })) : 'the next APEX server day'} for your next reward.` : 'Your entitlement is awarded by the APEX server, then any pack goes straight into your normal unopened-pack inventory.'}</p><div class="daily-streak"><span><b>${Number(daily.streak || 0)}</b> day streak</span><span><b>${Number(daily.cyclesCompleted || 0)}</b> completed tracks</span></div><div class="button-row">${claimed ? '<button class="ghost" data-route="home">Back home</button>' : '<button class="primary" id="claimDaily">Claim reward</button>'}</div></div><div class="daily-current"><span>DAY ${currentDay}</span><b>${esc(daily.reward?.name || 'Daily reward')}</b><small>${esc(rewardText(daily.reward?.payload))}</small></div></section><div class="daily-track">${track.map(item => `<article class="${Number(item.day) === currentDay ? 'current' : ''} ${Number(item.day) < currentDay || (claimed && Number(item.day) === currentDay) ? 'claimed' : ''}"><span>DAY ${item.day}</span><strong>${esc(item.name)}</strong><small>${esc(rewardText(item.payload))}</small></article>`).join('')}</div>`;
+    const currentReward = daily.reward || track.find(item => Number(item.day) === currentDay) || {};
+    const currentPayload = currentReward.payload || {};
+    const isEliteDay = Number(currentPayload?.packs?.elite || 0) > 0;
+    const headline = claimed ? 'Reward secured for today.' : isEliteDay ? 'The Elite reward is ready.' : `Day ${currentDay} is ready.`;
+    const nextEligible = daily.nextEligibleAt
+      ? new Date(daily.nextEligibleAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      : 'the next APEX server day';
+
+    content.innerHTML = `<section class="daily-reward-hero ${isEliteDay ? 'is-elite' : ''}">
+      <div class="daily-hero-copy">
+        <p class="eyebrow">APEX DAILY LOGIN</p>
+        <h2>${headline}</h2>
+        <p>${claimed ? `Your reward has been added securely. Come back after ${esc(nextEligible)} to continue the track.` : 'Claim your reward to continue the seven-day run. Pack rewards go straight into your unopened inventory.'}</p>
+        <div class="daily-streak"><span><b>${Number(daily.streak || 0)}</b> day streak</span><span><b>${Number(daily.cyclesCompleted || 0)}</b> completed tracks</span></div>
+        <div class="daily-claim-row">
+          ${claimed ? '<button class="ghost" data-route="home">Back home</button>' : '<button class="primary daily-claim" id="claimDaily"><span>Claim reward</span><i aria-hidden="true">→</i></button><button class="ghost" data-route="home">Not now</button>'}
+          <small>Server-verified · one claim per day</small>
+        </div>
+      </div>
+      <aside class="daily-feature">
+        <div class="daily-feature-orbit" aria-hidden="true"></div>
+        ${rewardArt(currentPayload, 'hero')}
+        <div class="daily-feature-copy">
+          <span>DAY ${currentDay}</span>
+          <b>${esc(currentReward.name || 'Daily reward')}</b>
+          <small>${esc(rewardText(currentPayload))}</small>
+        </div>
+      </aside>
+    </section>
+    <section class="daily-track-section" aria-label="Seven-day Daily Login Rewards track">
+      <div class="daily-track-heading">
+        <div><p class="eyebrow">7 DAY LOGIN TRACK</p><h3>Collect your way to the Elite Pack.</h3></div>
+        <span>${claimed ? 'Come back tomorrow' : `Day ${currentDay} available`}</span>
+      </div>
+      <div class="daily-track">${track.map(item => dailyRewardCard(item, currentDay, claimed)).join('')}</div>
+    </section>`;
     const claim = byId('claimDaily');
     if (claim) claim.onclick = async () => {
       claim.disabled = true;
-      claim.textContent = 'Claiming…';
+      content.classList.add('daily-claim-pending');
+      claim.innerHTML = '<span>Securing reward</span><i aria-hidden="true">…</i>';
       try {
         await gameApi('daily.claim');
         await refresh();
         await rewards();
       } catch (error) {
+        content.classList.remove('daily-claim-pending');
         claim.disabled = false;
         claim.textContent = error.message || 'Try again';
       }
@@ -490,6 +562,18 @@ async function rewards() {
     bindRoutes(content);
   } catch (error) {
     content.innerHTML = `<div class="notice">Daily rewards are temporarily unavailable. ${esc(error.message || 'Please try again.')}</div>`;
+  }
+}
+
+async function openDailyRewardOnArrival() {
+  if (state?.activeOpening) return false;
+  try {
+    const daily = await gameApi('daily.status');
+    if (daily.alreadyClaimed) return false;
+    route('rewards', { daily });
+    return true;
+  } catch {
+    return false;
   }
 }
 
@@ -505,10 +589,15 @@ function competitions() {
   renderCompetitions({ page, gameApi, esc, byId, navigate: route });
 }
 
+function clubs() {
+  renderClubs({ page, gameApi, esc, byId });
+}
+
 function profile() {
   const career = state.career || {};
   const content = page('Profile & Stats', 'YOUR APEX CAREER');
-  content.innerHTML = `<div class="stat-grid"><div class="stat-item"><span class="qty">${Number(career.packs_opened || 0)}</span><p>Real packs opened</p></div><div class="stat-item"><span class="qty">${Number(career.boxes_opened || 0)}</span><p>Boxes opened</p></div><div class="stat-item"><span class="qty">${Number(career.cards_pulled || 0)}</span><p>Cards pulled</p></div><div class="stat-item"><span class="qty">${state.cards?.length || 0}</span><p>Unique cards owned</p></div><div class="stat-item"><span class="qty">${Number(career.draft_stars || 0)}</span><p>Draft Stars</p></div><div class="stat-item"><span class="qty">${Number(career.xp || 0)}</span><p>APEX XP</p></div><div class="stat-item"><span class="qty">${Number(career.quick_sell_coins || 0).toLocaleString()}</span><p>Coins from spares</p></div></div><div class="generic-card" style="margin-top:14px"><p class="eyebrow">APEX ACCOUNT</p><h3>${esc(state.profile?.display_name || 'Collector')}</h3><p class="muted">@${esc(state.profile?.username || 'apex-collector')} · secure cloud save</p><div class="profile-actions"><button class="tiny-btn" id="friends">Friends</button><button class="tiny-btn" id="friendTeams">Friend Teams</button><button class="tiny-btn" id="competitions">Competitions</button><button class="tiny-btn" id="logout">Sign out</button></div></div>`;
+  content.innerHTML = `<div class="stat-grid"><div class="stat-item"><span class="qty">${Number(career.packs_opened || 0)}</span><p>Real packs opened</p></div><div class="stat-item"><span class="qty">${Number(career.boxes_opened || 0)}</span><p>Boxes opened</p></div><div class="stat-item"><span class="qty">${Number(career.cards_pulled || 0)}</span><p>Cards pulled</p></div><div class="stat-item"><span class="qty">${state.cards?.length || 0}</span><p>Unique cards owned</p></div><div class="stat-item"><span class="qty">${Number(career.draft_stars || 0)}</span><p>Draft Stars</p></div><div class="stat-item"><span class="qty">${Number(career.xp || 0)}</span><p>APEX XP</p></div><div class="stat-item"><span class="qty">${Number(career.quick_sell_coins || 0).toLocaleString()}</span><p>Coins from spares</p></div></div><div class="generic-card" style="margin-top:14px"><p class="eyebrow">APEX ACCOUNT</p><h3>${esc(state.profile?.display_name || 'Collector')}</h3><p class="muted">@${esc(state.profile?.username || 'apex-collector')} · secure cloud save</p><div class="profile-actions"><button class="tiny-btn" id="clubs">Clubs</button><button class="tiny-btn" id="friends">Friends</button><button class="tiny-btn" id="friendTeams">Friend Teams</button><button class="tiny-btn" id="competitions">Competitions</button><button class="tiny-btn" id="logout">Sign out</button></div></div>`;
+  byId('clubs').onclick = () => route('clubs');
   byId('friends').onclick = () => route('friends');
   byId('friendTeams').onclick = () => route('friend-team');
   byId('competitions').onclick = () => route('competitions');
@@ -521,7 +610,7 @@ function soon(name) {
   bindRoutes(content);
 }
 
-function route(name = 'home') {
+function route(name = 'home', options = {}) {
   chrome(true);
   setChrome();
   if (state.activeOpening && name !== 'open') return resumeOpening();
@@ -533,9 +622,10 @@ function route(name = 'home') {
   else if (name === 'store') store();
   else if (name === 'profile') profile();
   else if (name === 'friends') friends();
+  else if (name === 'clubs') clubs();
   else if (name === 'friend-team') friendTeams();
   else if (name === 'competitions') competitions();
-  else if (name === 'rewards') rewards();
+  else if (name === 'rewards') rewards(options.daily);
   else soon(name === 'objectives' ? 'Objectives' : name === 'draft' ? 'Quick Draft' : name === 'sbc' ? 'SBCs' : 'Pack Rush');
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
@@ -545,7 +635,7 @@ async function boot() {
   if (!session) return auth();
   await refresh();
   if (!state.profile?.onboarding_completed) return onboarding();
-  route('home');
+  if (!(await openDailyRewardOnArrival())) route('home');
 }
 
 supabase.auth.onAuthStateChange((_event, session) => { if (!session) { state = null; auth(); } });
