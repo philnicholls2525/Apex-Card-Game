@@ -53,6 +53,15 @@ Deno.serve(async (req) => {
       case "friend.remove": data = await rpc("api_friend_remove", { p_user: userId, p_target: String(body.targetUserId || "") }); break;
       case "friend.block": data = await rpc("api_user_block", { p_user: userId, p_target: String(body.targetUserId || ""), p_block: Boolean(body.block) }); break;
       case "profile.update": data = await rpc("api_profile_update", { p_user: userId, p_display: String(body.displayName || ""), p_favourite_club: String(body.favouriteClub || ""), p_privacy: body.privacy || null }); break;
+      case "club.status": data = await rpc("api_club_status", { p_user: userId }); break;
+      case "club.search": data = await rpc("api_club_search", { p_user: userId, p_query: String(body.query || "") }); break;
+      case "club.create": data = await rpc("api_club_create", { p_user: userId, p_name: String(body.name || ""), p_tag: String(body.tag || ""), p_description: String(body.description || ""), p_motto: String(body.motto || ""), p_join_mode: String(body.joinMode || ""), p_primary_color: String(body.primaryColor || ""), p_secondary_color: String(body.secondaryColor || ""), p_key: idempotencyKey }); break;
+      case "club.join": data = await rpc("api_club_join", { p_user: userId, p_club: String(body.clubId || ""), p_key: idempotencyKey }); break;
+      case "club.request.respond": data = await rpc("api_club_request_respond", { p_user: userId, p_request: String(body.requestId || ""), p_accept: Boolean(body.accept), p_key: idempotencyKey }); break;
+      case "club.invite": data = await rpc("api_club_invite", { p_user: userId, p_club: String(body.clubId || ""), p_target: String(body.targetUserId || ""), p_key: idempotencyKey }); break;
+      case "club.invite.respond": data = await rpc("api_club_invite_respond", { p_user: userId, p_invite: String(body.inviteId || ""), p_accept: Boolean(body.accept), p_key: idempotencyKey }); break;
+      case "club.role.update": data = await rpc("api_club_member_role_update", { p_user: userId, p_club: String(body.clubId || ""), p_target: String(body.targetUserId || ""), p_role: String(body.role || ""), p_key: idempotencyKey }); break;
+      case "club.leave": data = await rpc("api_club_leave", { p_user: userId, p_key: idempotencyKey }); break;
       case "draft.start": case "draft.action": case "rush.start": case "rush.action": case "sbc.submit": case "objective.claim":
         return fail(501, "mode_pending", "This server action is reserved but is not enabled in this checkpoint.");
       default: return fail(400, "unknown_action", "Unknown game action.");
