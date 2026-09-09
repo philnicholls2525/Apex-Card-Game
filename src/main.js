@@ -3,6 +3,7 @@ import { signIn, signOut, signUp, resetPassword } from './auth.js';
 import { gameApi } from './game-api.js';
 import { readLegacySave } from './import-validator.js';
 import { renderFriends } from './social-ui.js';
+import { renderFriendTeams, renderCompetitions } from './teams-ui.js';
 import { renderClubs } from './clubs-ui.js';
 
 const root = document.querySelector('#app');
@@ -511,12 +512,16 @@ async function rewards(initialDaily = null) {
     const currentPayload = currentReward.payload || {};
     const isEliteDay = Number(currentPayload?.packs?.elite || 0) > 0;
     const headline = claimed ? 'Reward secured for today.' : isEliteDay ? 'The Elite reward is ready.' : `Day ${currentDay} is ready.`;
+    const nextEligible = daily.nextEligibleAt
+      ? new Date(daily.nextEligibleAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      : 'the next APEX server day';
 
     content.innerHTML = `<section class="daily-reward-hero ${isEliteDay ? 'is-elite' : ''}">
       <div class="daily-hero-copy">
         <p class="eyebrow">APEX DAILY LOGIN</p>
         <h2>${headline}</h2>
-        <p>${claimed ? 'Your reward has been added securely. Come back after the next APEX server day to continue the track.' : 'Claim your reward to continue the seven-day run. Pack rewards go straight into your unopened inventory.'}</p>
+        <p>${claimed ? `Your reward has been added securely. Come back after ${esc(nextEligible)} to continue the track.` : 'Claim your reward to continue the seven-day run. Pack rewards go straight into your unopened inventory.'}</p>
+        <div class="daily-streak"><span><b>${Number(daily.streak || 0)}</b> day streak</span><span><b>${Number(daily.cyclesCompleted || 0)}</b> completed tracks</span></div>
         <div class="daily-claim-row">
           ${claimed ? '<button class="ghost" data-route="home">Back home</button>' : '<button class="primary daily-claim" id="claimDaily"><span>Claim reward</span><i aria-hidden="true">→</i></button><button class="ghost" data-route="home">Not now</button>'}
           <small>Server-verified · one claim per day</small>
@@ -539,7 +544,6 @@ async function rewards(initialDaily = null) {
       </div>
       <div class="daily-track">${track.map(item => dailyRewardCard(item, currentDay, claimed)).join('')}</div>
     </section>`;
-
     const claim = byId('claimDaily');
     if (claim) claim.onclick = async () => {
       claim.disabled = true;
@@ -574,7 +578,15 @@ async function openDailyRewardOnArrival() {
 }
 
 function friends() {
-  renderFriends({ page, gameApi, esc, byId });
+  renderFriends({ page, gameApi, esc, byId, navigate: route });
+}
+
+function friendTeams() {
+  renderFriendTeams({ page, gameApi, esc, byId, navigate: route });
+}
+
+function competitions() {
+  renderCompetitions({ page, gameApi, esc, byId, navigate: route });
 }
 
 function clubs() {
@@ -584,9 +596,11 @@ function clubs() {
 function profile() {
   const career = state.career || {};
   const content = page('Profile & Stats', 'YOUR APEX CAREER');
-  content.innerHTML = `<div class="stat-grid"><div class="stat-item"><span class="qty">${Number(career.packs_opened || 0)}</span><p>Real packs opened</p></div><div class="stat-item"><span class="qty">${Number(career.boxes_opened || 0)}</span><p>Boxes opened</p></div><div class="stat-item"><span class="qty">${Number(career.cards_pulled || 0)}</span><p>Cards pulled</p></div><div class="stat-item"><span class="qty">${state.cards?.length || 0}</span><p>Unique cards owned</p></div><div class="stat-item"><span class="qty">${Number(career.draft_stars || 0)}</span><p>Draft Stars</p></div><div class="stat-item"><span class="qty">${Number(career.xp || 0)}</span><p>APEX XP</p></div><div class="stat-item"><span class="qty">${Number(career.quick_sell_coins || 0).toLocaleString()}</span><p>Coins from spares</p></div></div><div class="generic-card" style="margin-top:14px"><p class="eyebrow">APEX ACCOUNT</p><h3>${esc(state.profile?.display_name || 'Collector')}</h3><p class="muted">@${esc(state.profile?.username || 'apex-collector')} · secure cloud save</p><div class="profile-actions"><button class="tiny-btn" id="clubs">Clubs</button><button class="tiny-btn" id="friends">Friends</button><button class="tiny-btn" id="logout">Sign out</button></div></div>`;
+  content.innerHTML = `<div class="stat-grid"><div class="stat-item"><span class="qty">${Number(career.packs_opened || 0)}</span><p>Real packs opened</p></div><div class="stat-item"><span class="qty">${Number(career.boxes_opened || 0)}</span><p>Boxes opened</p></div><div class="stat-item"><span class="qty">${Number(career.cards_pulled || 0)}</span><p>Cards pulled</p></div><div class="stat-item"><span class="qty">${state.cards?.length || 0}</span><p>Unique cards owned</p></div><div class="stat-item"><span class="qty">${Number(career.draft_stars || 0)}</span><p>Draft Stars</p></div><div class="stat-item"><span class="qty">${Number(career.xp || 0)}</span><p>APEX XP</p></div><div class="stat-item"><span class="qty">${Number(career.quick_sell_coins || 0).toLocaleString()}</span><p>Coins from spares</p></div></div><div class="generic-card" style="margin-top:14px"><p class="eyebrow">APEX ACCOUNT</p><h3>${esc(state.profile?.display_name || 'Collector')}</h3><p class="muted">@${esc(state.profile?.username || 'apex-collector')} · secure cloud save</p><div class="profile-actions"><button class="tiny-btn" id="clubs">Clubs</button><button class="tiny-btn" id="friends">Friends</button><button class="tiny-btn" id="friendTeams">Friend Teams</button><button class="tiny-btn" id="competitions">Competitions</button><button class="tiny-btn" id="logout">Sign out</button></div></div>`;
   byId('clubs').onclick = () => route('clubs');
   byId('friends').onclick = () => route('friends');
+  byId('friendTeams').onclick = () => route('friend-team');
+  byId('competitions').onclick = () => route('competitions');
   byId('logout').onclick = async () => { await signOut(); state = null; auth(); };
 }
 
@@ -609,6 +623,8 @@ function route(name = 'home', options = {}) {
   else if (name === 'profile') profile();
   else if (name === 'friends') friends();
   else if (name === 'clubs') clubs();
+  else if (name === 'friend-team') friendTeams();
+  else if (name === 'competitions') competitions();
   else if (name === 'rewards') rewards(options.daily);
   else soon(name === 'objectives' ? 'Objectives' : name === 'draft' ? 'Quick Draft' : name === 'sbc' ? 'SBCs' : 'Pack Rush');
   window.scrollTo({ top: 0, behavior: 'smooth' });

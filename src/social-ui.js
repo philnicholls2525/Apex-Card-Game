@@ -1,4 +1,4 @@
-export function renderFriends({ page, gameApi, esc, byId }) {
+export function renderFriends({ page, gameApi, esc, byId, navigate }) {
   const content = page('Friends', 'APEX SOCIAL');
   let social = { friends: [], incoming: [], outgoing: [] };
   let searchResults = [];
@@ -6,10 +6,11 @@ export function renderFriends({ page, gameApi, esc, byId }) {
   const name = collector => esc(collector.displayName || collector.username || collector.apexId || 'APEX collector');
   const handle = collector => collector.apexId ? `APEX ID · ${esc(collector.apexId)}` : `@${esc(collector.username || 'collector')}`;
   const actionButton = (label, action, id, tone = '') => `<button class="tiny-btn ${tone}" data-social-action="${action}" data-social-id="${esc(id)}">${label}</button>`;
+  const viewButton = collector => actionButton('View', 'view', collector.userId);
   const collectorRow = (collector, actions, note = '') => `<article class="social-collector"><div class="social-avatar">${esc((collector.displayName || collector.username || 'A').slice(0, 1).toUpperCase())}</div><div><strong>${name(collector)}</strong><small>${handle(collector)}${note ? ` · ${esc(note)}` : ''}</small></div><div class="social-actions">${actions}</div></article>`;
 
   function render() {
-    content.innerHTML = `<section class="social-hero"><div><p class="eyebrow">YOUR NETWORK</p><h2>Build your APEX circle.</h2><p>Find collectors by username, display name or APEX ID. Friend requests are handled securely by the game server.</p></div><div class="social-count"><span>CONNECTED</span><b>${social.friends.length}</b><small>friends</small></div></section><section class="social-search"><label for="collector-search">Find a collector</label><div><input id="collector-search" maxlength="48" placeholder="Search username, name or APEX ID" autocomplete="off"><button class="primary" id="collector-search-button">Search</button></div><p class="muted" id="collector-search-message">Search never exposes email addresses.</p><div class="social-results" id="collector-search-results"></div></section><section class="social-grid"><div class="generic-card"><p class="eyebrow">FRIENDS</p><h3>Your squad</h3><div class="social-list">${social.friends.length ? social.friends.map(friend => collectorRow(friend, actionButton('Remove', 'remove', friend.userId))).join('') : '<p class="muted">No friends yet. Search for an APEX collector above.</p>'}</div></div><div class="generic-card"><p class="eyebrow">INCOMING</p><h3>Requests for you</h3><div class="social-list">${social.incoming.length ? social.incoming.map(request => collectorRow(request, `${actionButton('Accept', 'accept', request.friendshipId, 'primary')}${actionButton('Decline', 'decline', request.friendshipId)}`)).join('') : '<p class="muted">No pending requests.</p>'}</div></div><div class="generic-card"><p class="eyebrow">SENT</p><h3>Waiting to connect</h3><div class="social-list">${social.outgoing.length ? social.outgoing.map(request => collectorRow(request, '<span class="social-pending">Pending</span>')).join('') : '<p class="muted">No outgoing requests.</p>'}</div></div></section>`;
+    content.innerHTML = `<section class="social-hero"><div><p class="eyebrow">YOUR NETWORK</p><h2>Build your APEX circle.</h2><p>Find collectors by username, display name or APEX ID. Friend requests are handled securely by the game server.</p><div class="button-row"><button class="tiny-btn primary-mini" id="friendTeams">Friend Teams</button></div></div><div class="social-count"><span>CONNECTED</span><b>${social.friends.length}</b><small>friends</small></div></section><section class="social-search"><label for="collector-search">Find a collector</label><div><input id="collector-search" maxlength="48" placeholder="Search username, name or APEX ID" autocomplete="off"><button class="primary" id="collector-search-button">Search</button></div><p class="muted" id="collector-search-message">Search never exposes email addresses.</p><div class="social-results" id="collector-search-results"></div></section><section class="social-grid"><div class="generic-card"><p class="eyebrow">FRIENDS</p><h3>Your squad</h3><div class="social-list">${social.friends.length ? social.friends.map(friend => collectorRow(friend, `${viewButton(friend)}${actionButton('Remove', 'remove', friend.userId)}`)).join('') : '<p class="muted">No friends yet. Search for an APEX collector above.</p>'}</div></div><div class="generic-card"><p class="eyebrow">INCOMING</p><h3>Requests for you</h3><div class="social-list">${social.incoming.length ? social.incoming.map(request => collectorRow(request, `${viewButton(request)}${actionButton('Accept', 'accept', request.friendshipId, 'primary')}${actionButton('Decline', 'decline', request.friendshipId)}`)).join('') : '<p class="muted">No pending requests.</p>'}</div></div><div class="generic-card"><p class="eyebrow">SENT</p><h3>Waiting to connect</h3><div class="social-list">${social.outgoing.length ? social.outgoing.map(request => collectorRow(request, `${viewButton(request)}${actionButton('Cancel', 'cancel', request.friendshipId)}`)).join('') : '<p class="muted">No outgoing requests.</p>'}</div></div></section>`;
     bind();
   }
 
@@ -33,7 +34,7 @@ export function renderFriends({ page, gameApi, esc, byId }) {
       else if (result.relationship === 'outgoing') actions = '<span class="social-pending">Request sent</span>';
       else if (result.relationship === 'friends') actions = '<span class="social-pending">Friends</span>';
       else actions = '<span class="social-pending">Unavailable</span>';
-      return collectorRow(result, actions);
+      return collectorRow(result, `${viewButton(result)}${actions}`);
     }).join('') : '';
     bindActions(results);
   }
@@ -51,13 +52,30 @@ export function renderFriends({ page, gameApi, esc, byId }) {
 
   async function act(action, id) {
     try {
+      if (action === 'view') return openProfile(id);
       if (action === 'request') await gameApi('friend.request', { targetUserId: id });
       if (action === 'accept') await gameApi('friend.respond', { friendshipId: id, accept: true });
       if (action === 'decline') await gameApi('friend.respond', { friendshipId: id, accept: false });
+      if (action === 'cancel') await gameApi('friend.cancel', { friendshipId: id });
       if (action === 'remove') await gameApi('friend.remove', { targetUserId: id });
       searchResults = [];
       await load();
     } catch (error) { showSearchMessage(error.message || 'That action could not be completed.', true); }
+  }
+
+  async function openProfile(userId) {
+    const profile = await gameApi('social.profile', { targetUserId: userId });
+    document.getElementById('socialProfileModal')?.remove();
+    const shell = document.createElement('div');
+    shell.id = 'socialProfileModal';
+    shell.className = 'modal-shell';
+    const relationship = profile.relationship === 'friends' ? 'Friend' : profile.relationship === 'incoming' ? 'Request received' : profile.relationship === 'outgoing' ? 'Request sent' : 'APEX collector';
+    shell.innerHTML = `<article class="modal-card social-profile-card"><button class="social-profile-close" aria-label="Close">×</button><div class="social-avatar social-profile-avatar">${esc((profile.displayName || profile.username || 'A').slice(0, 1).toUpperCase())}</div><p class="eyebrow">${esc(relationship)}</p><h3>${name(profile)}</h3><p class="muted">${handle(profile)}</p>${profile.limited ? '<p class="notice">This collector shares profile details with friends only.</p>' : `<div class="list"><div class="list-row"><span>Favourite club</span><b>${esc(profile.favouriteClub || 'Not set')}</b></div><div class="list-row"><span>APEX member since</span><b>${profile.memberSince ? esc(new Date(profile.memberSince).toLocaleDateString()) : '—'}</b></div>${profile.connectedSince ? `<div class="list-row"><span>Friends since</span><b>${esc(new Date(profile.connectedSince).toLocaleDateString())}</b></div>` : ''}</div>`}<button class="ghost social-profile-done">Close</button></article>`;
+    document.body.append(shell);
+    const close = () => shell.remove();
+    shell.querySelector('.social-profile-close').onclick = close;
+    shell.querySelector('.social-profile-done').onclick = close;
+    shell.onclick = event => { if (event.target === shell) close(); };
   }
 
   function bindActions(scope = content) {
@@ -69,6 +87,7 @@ export function renderFriends({ page, gameApi, esc, byId }) {
   function bind() {
     byId('collector-search-button').onclick = search;
     byId('collector-search').onkeydown = event => { if (event.key === 'Enter') search(); };
+    byId('friendTeams').onclick = () => navigate('friend-team');
     bindActions();
   }
 
