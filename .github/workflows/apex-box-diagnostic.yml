@@ -1,0 +1,30 @@
+name: APEX box diagnostic build
+on:
+  push:
+    branches:
+      - experiment/apex-box-opening-animation
+    paths:
+      - 'modding/apex-basic-box/**'
+      - '.github/workflows/apex-box-diagnostic.yml'
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Restore and build
+        run: |
+          dotnet restore modding/apex-basic-box/ApexBasicBox.csproj --source https://nuget.bepinex.dev/v3/index.json --source https://api.nuget.org/v3/index.json
+          dotnet build modding/apex-basic-box/ApexBasicBox.csproj -c Release --no-restore
+      - name: Package diagnostic DLL
+        run: |
+          mkdir -p dist/APEX_Basic_Box_Test
+          cp modding/apex-basic-box/bin/Release/netstandard2.1/ApexBasicBoxTest.dll dist/APEX_Basic_Box_Test/
+          printf 'DIAGNOSTIC BUILD ONLY. Add APEX_Box_1024.rgba from the known working v0.1.0 folder. Do not delete the working DLL until tested.\n' > dist/README.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: APEX-Basic-Box-Diagnostic-DLL
+          path: dist/
